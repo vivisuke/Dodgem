@@ -1,3 +1,16 @@
-[gd_scene format=2]
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://ColorRect.gd" type="Script" id=1]
 
 [node name="MainScene" type="Node2D"]
+
+[node name="ColorRect" type="ColorRect" parent="."]
+margin_left = 96.0
+margin_top = 96.0
+margin_right = 384.0
+margin_bottom = 384.0
+color = Color( 0.941176, 0.941176, 0.941176, 1 )
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
