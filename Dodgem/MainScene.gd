@@ -14,15 +14,16 @@ func _ready():
 	
 func init_cursor():
 	cursor = Vector2(-1, -1)
-	for y in range(N_VERT):
+	for y in range(N_VERT+1):
 		for x in range(N_HORZ):
-			$Board/CursorTileMap.set_cell(x, y, -1)
+			$Board/CursorTileMap.set_cell(x, y-1, -1)
 
 func _input(event):
 	if event is InputEventMouseButton && event.is_pressed():
 		var mp = $Board/TileMap.world_to_map($Board/TileMap.get_local_mouse_position())
-		if mp.x < 0 || mp.x >= N_HORZ || mp.y < 0 || mp.y >= N_VERT:
-			return
+		if( $Board/CursorTileMap.get_cellv(mp) != TILE_DST &&
+			(mp.x < 0 || mp.x >= N_HORZ || mp.y < 0 || mp.y >= N_VERT) ):
+				return
 		if $Board/TileMap.get_cellv(mp) == TILE_RED:
 			if cursor == mp:
 				init_cursor()
@@ -39,5 +40,8 @@ func _input(event):
 		else:
 			if $Board/CursorTileMap.get_cellv(mp) == TILE_DST:
 				print("src = ", cursor, ", dst = ", mp)
+				$Board/TileMap.set_cellv(cursor, -1)
+				if mp.y >= 0:
+					$Board/TileMap.set_cellv(mp, TILE_RED)
 				pass
 			init_cursor()
