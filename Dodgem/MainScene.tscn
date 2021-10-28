@@ -1,10 +1,11 @@
-[gd_scene load_steps=8 format=2]
+[gd_scene load_steps=9 format=2]
 
 [ext_resource path="res://ColorRect.gd" type="Script" id=1]
 [ext_resource path="res://images/up_red.png" type="Texture" id=2]
 [ext_resource path="res://images/right_blue.png" type="Texture" id=3]
 [ext_resource path="res://images/select_black.png" type="Texture" id=4]
 [ext_resource path="res://images/dest_green.png" type="Texture" id=5]
+[ext_resource path="res://MainScene.gd" type="Script" id=6]
 
 [sub_resource type="TileSet" id=1]
 0/name = "up_red.png 0"
@@ -67,8 +68,9 @@
 1/z_index = 0
 
 [node name="MainScene" type="Node2D"]
+script = ExtResource( 6 )
 
-[node name="ColorRect" type="ColorRect" parent="."]
+[node name="Board" type="ColorRect" parent="."]
 margin_left = 96.0
 margin_top = 96.0
 margin_right = 384.0
@@ -79,13 +81,13 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="TileMap" type="TileMap" parent="ColorRect"]
+[node name="TileMap" type="TileMap" parent="Board"]
 tile_set = SubResource( 1 )
 cell_size = Vector2( 96, 96 )
 format = 1
 tile_data = PoolIntArray( 0, 1, 0, 65536, 1, 0, 131073, 0, 0, 131074, 0, 0 )
 
-[node name="CursorTileMap" type="TileMap" parent="ColorRect"]
+[node name="CursorTileMap" type="TileMap" parent="Board"]
 tile_set = SubResource( 2 )
 cell_size = Vector2( 96, 96 )
 show_collision = true
