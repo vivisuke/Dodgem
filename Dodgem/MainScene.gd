@@ -1,5 +1,10 @@
 extends Node2D
 
+enum {
+	MODE_INIT = 0,
+	MODE_RAND_HUMAN,
+	MODE_RAND_RAND,
+}
 const N_HORZ = 3
 const N_VERT = 3
 const TILE_NONE = -1
@@ -8,14 +13,49 @@ const TILE_BLUE = 1
 const TILE_SRC = 0
 const TILE_DST = 1
 
+var mode = MODE_INIT
+var last_mode = MODE_INIT
+var nEpisode = 0
+var nEpisodeRest = 0
+var red_first = true		# 赤が先手
+var dstcur_showed = false		# 移動先カーソル表示状態
+var nMoved = 0				# 何手着手したか
 var next = TILE_RED			# TILE_RED | TILE_BLUE
+var nRed = 2				# 下側ピース個数
+var nBlue = 2				# 左側ピース個数
+var nRedWon = 0		# 赤勝利数
+var nBlueWon = 0	# 青勝利数
+
 var cursor = Vector2(-1, -1)
 var rng = RandomNumberGenerator.new()
 
 func _ready():
+	rng.randomize()
+	init_board()			# 盤面消去
 	init_cursor()
-	
+func init_board():
+	for y in range(N_VERT):
+		for x in range(N_HORZ):
+			$Board/TileMap.set_cell(x, y, TILE_NONE)
+	for y in range(0, N_VERT-1):
+		$Board/TileMap.set_cell(0, y, TILE_BLUE)
+	for x in range(1, N_HORZ):
+		$Board/TileMap.set_cell(x, 2, TILE_RED)
+	nRed = N_HORZ - 1
+	nBlue = N_VERT - 1
+func clear_stats():
+	nRedWon = 0
+	nBlueWon = 0
+	nEpisode = 0
+func update_stats_label():
+	if nEpisode == 0:
+		$OutputLabel.text = ""
+	else:
+		$OutputLabel.text = "Red won: %d (%.1f%%)\n" % [nRedWon, nRedWon*100.0/nEpisode]
+		$OutputLabel.text += "Blue won: %d (%.1f%%)\n" % [nBlueWon, nBlueWon*100.0/nEpisode]
+	pass
 func init_cursor():
+	dstcur_showed = false
 	cursor = Vector2(-1, -1)
 	for y in range(N_VERT+1):
 		for x in range(N_HORZ):
@@ -23,12 +63,16 @@ func init_cursor():
 
 func _input(event):
 	if event is InputEventMouseButton && event.is_pressed():
-		if next == TILE_BLUE: return
+		#if next == TILE_BLUE: return
+		if mode != MODE_RAND_HUMAN: return
+		if( (red_first && (nMoved%2) != 0) ||
+				(!red_first && (nMoved%2) != 1) ): return
+		# mp := クリックされたタイルマップ座標
 		var mp = $Board/TileMap.world_to_map($Board/TileMap.get_local_mouse_position())
 		if( $Board/CursorTileMap.get_cellv(mp) != TILE_DST &&
 			(mp.x < 0 || mp.x >= N_HORZ || mp.y < 0 || mp.y >= N_VERT) ):
-				return
-		if $Board/TileMap.get_cellv(mp) == TILE_RED:
+				return		# 盤面外がクリックされた場合
+		if $Board/TileMap.get_cellv(mp) == TILE_RED:	# 赤ピースがクリックされた場合
 			if cursor == mp:
 				init_cursor()
 			else:
@@ -41,18 +85,29 @@ func _input(event):
 					$Board/CursorTileMap.set_cell(mp.x+1, mp.y, TILE_DST)
 				if mp.y == 0 || $Board/TileMap.get_cell(mp.x, mp.y-1) < 0:
 					$Board/CursorTileMap.set_cell(mp.x, mp.y-1, TILE_DST)
+				dstcur_showed = true
 		else:
-			if $Board/CursorTileMap.get_cellv(mp) == TILE_DST:
+			if $Board/CursorTileMap.get_cellv(mp) == TILE_DST:		# 移動先がクリックされた場合
 				print("src = ", cursor, ", dst = ", mp)
-				$Board/TileMap.set_cellv(cursor, TILE_NONE)
-				if mp.y >= 0:
+				$Board/TileMap.set_cellv(cursor, TILE_NONE)		# 移動元
+				if mp.y >= 0:		# 盤面内の場合
 					$Board/TileMap.set_cellv(mp, TILE_RED)
-				next = TILE_BLUE
-				pass
+				else:
+					nRed -= 1
+				print("#blue = %d, #red = %d" % [nBlue, nRed])
+				nMoved += 1
+				if nRed == 0:
+					$MessLabel.text = "赤の勝ちです。"
+					nEpisode += 1
+					nRedWon += 1
+					update_stats_label()
+					mode = MODE_INIT
+					red_first = !red_first
+				else:
+					next = TILE_BLUE
 			init_cursor()
-
-func moveBlueRandom():
-	var lst = []
+func get_blue_moves() -> Array:
+	var lst = []		# 着手（Vector2(移動元, 移動先)）配列
 	for y in range(N_VERT+1):
 		for x in range(N_HORZ):
 			if $Board/TileMap.get_cell(x, y) == TILE_BLUE:
@@ -62,16 +117,62 @@ func moveBlueRandom():
 					lst.push_back([Vector2(x, y), Vector2(x, y+1)])
 				if x == N_HORZ-1 || $Board/TileMap.get_cell(x+1, y) < 0:
 					lst.push_back([Vector2(x, y), Vector2(x+1, y)])
-	if lst.empty():
+	return lst
+func moveBlueRandom():
+	var mvs = get_blue_moves()
+	if mvs.empty():
 		return			# BLUE won
-	var mv
-	if lst.size() == 1: mv = lst[0]
+	var mv : Array	# 
+	if mvs.size() == 1: mv = mvs[0]
 	else:
-		mv = lst[rng.randi_range(0, lst.size() - 1)]
-	$Board/TileMap.set_cellv(mv[0], TILE_NONE)
-	if mv[1][1] < N_HORZ:
-		$Board/TileMap.set_cellv(mv[1], TILE_BLUE)
-func _process(delta):
-	if next == TILE_BLUE:
-		moveBlueRandom()
+		mv = mvs[rng.randi_range(0, mvs.size() - 1)]
+	$Board/TileMap.set_cellv(mv[0], TILE_NONE)		# 移動元消去
+	if mv[1].x < N_HORZ:		# 盤面内の場合
+		$Board/TileMap.set_cellv(mv[1], TILE_BLUE)	# 移動先にピース設置
+	else:
+		nBlue -= 1
+	print("#blue = %d, #red = %d" % [nBlue, nRed])
+	nMoved += 1
+	if nBlue == 0:
+		$MessLabel.text = "青の勝ちです。"
+		nEpisode += 1
+		nBlueWon += 1
+		update_stats_label()
+		red_first = !red_first
+		mode = MODE_INIT
+	else:
 		next = TILE_RED
+func _process(delta):
+	if mode == MODE_RAND_HUMAN:
+		if next == TILE_BLUE:
+			$MessLabel.text = ""
+			moveBlueRandom()
+		else:
+			if !dstcur_showed:
+				$MessLabel.text = "移動元をクリックしてください。"
+			else:
+				$MessLabel.text = "移動先をクリックしてください。"
+
+func _on_RxHUM_Button_pressed():
+	if mode == MODE_RAND_HUMAN: return
+	if last_mode != MODE_RAND_HUMAN:
+		clear_stats()
+		update_stats_label()
+	mode = MODE_RAND_HUMAN
+	last_mode = MODE_RAND_HUMAN
+	init_board()
+	nMoved = 0
+	next = TILE_RED if red_first else TILE_BLUE
+	pass
+
+func _on_RxRx100_Button_pressed():
+	if mode == MODE_RAND_RAND: return
+	if last_mode != MODE_RAND_RAND:
+		clear_stats()
+		update_stats_label()
+	mode = MODE_RAND_RAND
+	last_mode = MODE_RAND_RAND
+	nMoved = 0
+	pass # Replace with function body.
+
+
