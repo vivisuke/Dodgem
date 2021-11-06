@@ -17,6 +17,7 @@ var mode = MODE_INIT
 var last_mode = MODE_INIT
 var nEpisode = 0
 var nEpisodeRest = 0
+var cantMoveWon = false		# 着手不可での勝利
 var red_first = true		# 赤が先手
 var dstcur_showed = false		# 移動先カーソル表示状態
 var nMoved = 0				# 何手着手したか
@@ -44,6 +45,7 @@ func init_board():
 	nRed = N_HORZ - 1
 	nBlue = N_VERT - 1
 	nMoved = 0
+	cantMoveWon = false
 func clear_stats():
 	nRedWon = 0
 	nBlueWon = 0
@@ -181,6 +183,7 @@ func moveRandom(nx) -> bool:		# nx: TILE_BLUE or TILE_RED, return: ゲーム終�
 		print("%d %d" % t)
 		var mvs2 = get_blue_moves() if nx == TILE_BLUE else get_red_moves()
 		gameOver(nx)	# 着手不可の場合は、その手番の勝ち
+		cantMoveWon = true		# 着手不可での勝利
 		return true
 	var mv : Array	# 
 	if mvs.size() == 1: mv = mvs[0]
@@ -216,7 +219,7 @@ func _process(delta):
 			else:
 				$MessLabel.text = "移動先をクリックしてください。"
 	elif mode == MODE_RAND_RAND:
-		if true:	# 1手/毎フレーム
+		if false:	# 1手/毎フレーム
 			var go = moveRandom(next)
 			check_pieces_count()
 			if go:
@@ -229,6 +232,8 @@ func _process(delta):
 			else:
 				next = (TILE_BLUE + TILE_RED) - next
 		else:		# 1局/毎フレーム
+			if cantMoveWon:
+				print("cantMoveWon == true")
 			init_board()
 			check_pieces_count()
 			while true:
