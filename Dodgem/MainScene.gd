@@ -43,6 +43,7 @@ func init_board():
 		$Board/TileMap.set_cell(x, 2, TILE_RED)
 	nRed = N_HORZ - 1
 	nBlue = N_VERT - 1
+	nMoved = 0
 func clear_stats():
 	nRedWon = 0
 	nBlueWon = 0
@@ -108,7 +109,7 @@ func _input(event):
 			init_cursor()
 func get_blue_moves() -> Array:
 	var lst = []		# 着手（Vector2(移動元, 移動先)）配列
-	for y in range(N_VERT+1):
+	for y in range(N_VERT):
 		for x in range(N_HORZ):
 			if $Board/TileMap.get_cell(x, y) == TILE_BLUE:
 				if y > 0 && $Board/TileMap.get_cell(x, y-1) < 0:
@@ -118,8 +119,20 @@ func get_blue_moves() -> Array:
 				if x == N_HORZ-1 || $Board/TileMap.get_cell(x+1, y) < 0:
 					lst.push_back([Vector2(x, y), Vector2(x+1, y)])
 	return lst
-func moveBlueRandom():
-	var mvs = get_blue_moves()
+func get_red_moves() -> Array:
+	var lst = []		# 着手（Vector2(移動元, 移動先)）配列
+	for y in range(N_VERT):
+		for x in range(N_HORZ):
+			if $Board/TileMap.get_cell(x, y) == TILE_RED:
+				if x > 0 && $Board/TileMap.get_cell(x-1, y) < 0:
+					lst.push_back([Vector2(x, y), Vector2(x-1, y)])
+				if x < N_HORZ-1 && $Board/TileMap.get_cell(x+1, y) < 0:
+					lst.push_back([Vector2(x, y), Vector2(x+1, y)])
+				if y == 0 || $Board/TileMap.get_cell(x, y-1) < 0:
+					lst.push_back([Vector2(x, y), Vector2(x, y-1)])
+	return lst
+func moveRandom(nx):		# nx: TILE_BLUE or TILE_RED
+	var mvs = get_blue_moves() if nx == TILE_BLUE else get_red_moves()
 	if mvs.empty():
 		return			# BLUE won
 	var mv : Array	# 
@@ -127,31 +140,54 @@ func moveBlueRandom():
 	else:
 		mv = mvs[rng.randi_range(0, mvs.size() - 1)]
 	$Board/TileMap.set_cellv(mv[0], TILE_NONE)		# 移動元消去
-	if mv[1].x < N_HORZ:		# 盤面内の場合
-		$Board/TileMap.set_cellv(mv[1], TILE_BLUE)	# 移動先にピース設置
-	else:
-		nBlue -= 1
+	if mv[1].x < N_HORZ && mv[1].y >= 0:		# 盤面内の場合
+		$Board/TileMap.set_cellv(mv[1], nx)			# 移動先にピース設置
+	else:		# 盤面外に移動した場合
+		if nx == TILE_BLUE:
+			nBlue -= 1
+		else:
+			nRed -= 1
 	print("#blue = %d, #red = %d" % [nBlue, nRed])
 	nMoved += 1
-	if nBlue == 0:
-		$MessLabel.text = "青の勝ちです。"
+	if nBlue == 0 || nRed == 0:
 		nEpisode += 1
-		nBlueWon += 1
+		if nBlue == 0:
+			$MessLabel.text = "青の勝ちです。"
+			nBlueWon += 1
+		else:
+			$MessLabel.text = "赤の勝ちです。"
+			nRedWon += 1
 		update_stats_label()
 		red_first = !red_first
-		mode = MODE_INIT
-	else:
-		next = TILE_RED
+		#mode = MODE_INIT
+	#else:
+	#	next = TILE_RED
 func _process(delta):
 	if mode == MODE_RAND_HUMAN:
 		if next == TILE_BLUE:
 			$MessLabel.text = ""
-			moveBlueRandom()
+			moveRandom(TILE_BLUE)
+			if nBlue == 0 || nRed == 0:
+				mode = MODE_INIT
+			else:
+				next = TILE_RED
 		else:
 			if !dstcur_showed:
 				$MessLabel.text = "移動元をクリックしてください。"
 			else:
 				$MessLabel.text = "移動先をクリックしてください。"
+	elif mode == MODE_RAND_RAND:
+		moveRandom(next)
+		if nBlue == 0 || nRed == 0:
+			nEpisodeRest -= 1
+			if nEpisodeRest <= 0:
+				mode = MODE_INIT
+			else:
+				init_board()
+				next = TILE_RED if red_first else TILE_BLUE
+				#mode = MODE_INIT
+		else:
+			next = (TILE_BLUE + TILE_RED) - next
 
 func _on_RxHUM_Button_pressed():
 	if mode == MODE_RAND_HUMAN: return
@@ -161,18 +197,16 @@ func _on_RxHUM_Button_pressed():
 	mode = MODE_RAND_HUMAN
 	last_mode = MODE_RAND_HUMAN
 	init_board()
-	nMoved = 0
 	next = TILE_RED if red_first else TILE_BLUE
 	pass
 
 func _on_RxRx100_Button_pressed():
-	if mode == MODE_RAND_RAND: return
-	if last_mode != MODE_RAND_RAND:
-		clear_stats()
-		update_stats_label()
+	nEpisodeRest = 100
+	nEpisode = 0
+	clear_stats()
 	mode = MODE_RAND_RAND
 	last_mode = MODE_RAND_RAND
-	nMoved = 0
-	pass # Replace with function body.
+	init_board()
+	pass
 
 
