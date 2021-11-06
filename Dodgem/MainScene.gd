@@ -132,6 +132,7 @@ func get_red_moves() -> Array:
 					lst.push_back([Vector2(x, y), Vector2(x, y-1)])
 	return lst
 func gameOver(won):
+	nEpisode += 1
 	if won == TILE_BLUE:
 		$MessLabel.text = "#%d: 青の勝ちです。" % nEpisode
 		nBlueWon += 1
@@ -140,12 +141,12 @@ func gameOver(won):
 		nRedWon += 1
 	update_stats_label()
 	red_first = !red_first
-func moveRandom(nx):		# nx: TILE_BLUE or TILE_RED
+func moveRandom(nx) -> bool:		# nx: TILE_BLUE or TILE_RED, return: ゲーム終了？
 	var mvs = get_blue_moves() if nx == TILE_BLUE else get_red_moves()
 	if mvs.empty():
-		print(("red" if nx == TILE_RED else "blue"), "can't move")
+		print(("red" if nx == TILE_RED else "blue"), " can't move")
 		gameOver(nx)	# 着手不可の場合は、その手番の勝ち
-		return
+		return true
 	var mv : Array	# 
 	if mvs.size() == 1: mv = mvs[0]
 	else:
@@ -161,14 +162,16 @@ func moveRandom(nx):		# nx: TILE_BLUE or TILE_RED
 	#print("#blue = %d, #red = %d" % [nBlue, nRed])
 	nMoved += 1
 	if nBlue == 0 || nRed == 0:
-		nEpisode += 1
 		gameOver(TILE_BLUE if nBlue == 0 else TILE_RED)
+		return true;		# 終局
+	else:
+		return false;
 func _process(delta):
 	if mode == MODE_RAND_HUMAN:
 		if next == TILE_BLUE:
 			$MessLabel.text = ""
-			moveRandom(TILE_BLUE)
-			if nBlue == 0 || nRed == 0:
+			var go = moveRandom(TILE_BLUE)
+			if go:
 				mode = MODE_INIT
 			else:
 				next = TILE_RED
@@ -180,8 +183,8 @@ func _process(delta):
 	elif mode == MODE_RAND_RAND:
 		init_board()
 		while true:
-			moveRandom(next)
-			if nBlue == 0 || nRed == 0:
+			var go = moveRandom(next)
+			if go:
 				nEpisodeRest -= 1
 				if nEpisodeRest <= 0:
 					mode = MODE_INIT
