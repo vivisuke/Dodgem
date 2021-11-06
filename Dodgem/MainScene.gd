@@ -95,7 +95,7 @@ func _input(event):
 					$Board/TileMap.set_cellv(mp, TILE_RED)
 				else:
 					nRed -= 1
-				print("#blue = %d, #red = %d" % [nBlue, nRed])
+				#print("#blue = %d, #red = %d" % [nBlue, nRed])
 				nMoved += 1
 				if nRed == 0:
 					$MessLabel.text = "赤の勝ちです。"
@@ -131,10 +131,21 @@ func get_red_moves() -> Array:
 				if y == 0 || $Board/TileMap.get_cell(x, y-1) < 0:
 					lst.push_back([Vector2(x, y), Vector2(x, y-1)])
 	return lst
+func gameOver(won):
+	if won == TILE_BLUE:
+		$MessLabel.text = "#%d: 青の勝ちです。" % nEpisode
+		nBlueWon += 1
+	else:
+		$MessLabel.text = "#%d: 赤の勝ちです。" % nEpisode
+		nRedWon += 1
+	update_stats_label()
+	red_first = !red_first
 func moveRandom(nx):		# nx: TILE_BLUE or TILE_RED
 	var mvs = get_blue_moves() if nx == TILE_BLUE else get_red_moves()
 	if mvs.empty():
-		return			# BLUE won
+		print(("red" if nx == TILE_RED else "blue"), "can't move")
+		gameOver(nx)	# 着手不可の場合は、その手番の勝ち
+		return
 	var mv : Array	# 
 	if mvs.size() == 1: mv = mvs[0]
 	else:
@@ -147,21 +158,11 @@ func moveRandom(nx):		# nx: TILE_BLUE or TILE_RED
 			nBlue -= 1
 		else:
 			nRed -= 1
-	print("#blue = %d, #red = %d" % [nBlue, nRed])
+	#print("#blue = %d, #red = %d" % [nBlue, nRed])
 	nMoved += 1
 	if nBlue == 0 || nRed == 0:
 		nEpisode += 1
-		if nBlue == 0:
-			$MessLabel.text = "青の勝ちです。"
-			nBlueWon += 1
-		else:
-			$MessLabel.text = "赤の勝ちです。"
-			nRedWon += 1
-		update_stats_label()
-		red_first = !red_first
-		#mode = MODE_INIT
-	#else:
-	#	next = TILE_RED
+		gameOver(TILE_BLUE if nBlue == 0 else TILE_RED)
 func _process(delta):
 	if mode == MODE_RAND_HUMAN:
 		if next == TILE_BLUE:
@@ -177,17 +178,19 @@ func _process(delta):
 			else:
 				$MessLabel.text = "移動先をクリックしてください。"
 	elif mode == MODE_RAND_RAND:
-		moveRandom(next)
-		if nBlue == 0 || nRed == 0:
-			nEpisodeRest -= 1
-			if nEpisodeRest <= 0:
-				mode = MODE_INIT
+		init_board()
+		while true:
+			moveRandom(next)
+			if nBlue == 0 || nRed == 0:
+				nEpisodeRest -= 1
+				if nEpisodeRest <= 0:
+					mode = MODE_INIT
+				else:
+					#init_board()
+					next = TILE_RED		# 常に赤が先手
+				break
 			else:
-				init_board()
-				next = TILE_RED if red_first else TILE_BLUE
-				#mode = MODE_INIT
-		else:
-			next = (TILE_BLUE + TILE_RED) - next
+				next = (TILE_BLUE + TILE_RED) - next
 
 func _on_RxHUM_Button_pressed():
 	if mode == MODE_RAND_HUMAN: return
@@ -207,6 +210,7 @@ func _on_RxRx100_Button_pressed():
 	mode = MODE_RAND_RAND
 	last_mode = MODE_RAND_RAND
 	init_board()
+	next = TILE_RED		# 常に赤先手
 	pass
 
 func _on_RxRx1000_Button_pressed():
@@ -216,4 +220,5 @@ func _on_RxRx1000_Button_pressed():
 	mode = MODE_RAND_RAND
 	last_mode = MODE_RAND_RAND
 	init_board()
+	next = TILE_RED		# 常に赤先手
 	pass
