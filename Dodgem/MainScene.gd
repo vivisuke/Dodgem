@@ -209,4 +209,11 @@ func _on_RxRx100_Button_pressed():
 	init_board()
 	pass
 
-
+func _on_RxRx1000_Button_pressed():
+	nEpisodeRest = 1000
+	nEpisode = 0
+	clear_stats()
+	mode = MODE_RAND_RAND
+	last_mode = MODE_RAND_RAND
+	init_board()
+	pass
