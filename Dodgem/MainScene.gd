@@ -61,7 +61,36 @@ func init_cursor():
 	for y in range(N_VERT+1):
 		for x in range(N_HORZ):
 			$Board/CursorTileMap.set_cell(x, y-1, TILE_NONE)
-
+# 必ず左下原点から、赤番なら右・上の順、青番なら上・右の順にスキャン
+func get_key(nx):
+	var mask = 1<<8
+	var bitsR = 0
+	var bitsB = 0
+	if nx == TILE_RED:
+		for y in range(2, -1, -1):
+			for x in range(N_HORZ):
+				if $Board/TileMap.get_cell(x, y) == TILE_RED: bitsR |= mask
+				elif $Board/TileMap.get_cell(x, y) == TILE_BLUE: bitsB |= mask
+				mask >>= 1
+		return [bitsR, bitsB]
+	else:
+		for x in range(N_HORZ):
+			for y in range(2, -1, -1):
+				if $Board/TileMap.get_cell(x, y) == TILE_RED: bitsR |= mask
+				elif $Board/TileMap.get_cell(x, y) == TILE_BLUE: bitsB |= mask
+				mask >>= 1
+		return [bitsB, bitsR]
+func check_pieces_count():
+	var nr = 0
+	var nb = 0
+	for y in range(N_VERT):
+		for x in range(N_HORZ):
+			if $Board/TileMap.get_cell(x, y) == TILE_RED: nr += 1
+			elif $Board/TileMap.get_cell(x, y) == TILE_BLUE: nb += 1
+	#return [nr, nb]
+	if nr != nRed || nb != nBlue:
+		print(get_key(next))
+		assert( nr == nRed && nb == nBlue )
 func _input(event):
 	if event is InputEventMouseButton && event.is_pressed():
 		#if next == TILE_BLUE: return
@@ -144,7 +173,13 @@ func gameOver(won):
 func moveRandom(nx) -> bool:		# nx: TILE_BLUE or TILE_RED, return: ゲーム終了？
 	var mvs = get_blue_moves() if nx == TILE_BLUE else get_red_moves()
 	if mvs.empty():
+		check_pieces_count()
+		print("nRed = ", nRed, ", nBlue = ", nBlue)
 		print(("red" if nx == TILE_RED else "blue"), " can't move")
+		#print(get_key(nx))
+		var t = get_key(nx)
+		print("%d %d" % t)
+		var mvs2 = get_blue_moves() if nx == TILE_BLUE else get_red_moves()
 		gameOver(nx)	# 着手不可の場合は、その手番の勝ち
 		return true
 	var mv : Array	# 
@@ -181,19 +216,34 @@ func _process(delta):
 			else:
 				$MessLabel.text = "移動先をクリックしてください。"
 	elif mode == MODE_RAND_RAND:
-		init_board()
-		while true:
+		if true:	# 1手/毎フレーム
 			var go = moveRandom(next)
+			check_pieces_count()
 			if go:
 				nEpisodeRest -= 1
 				if nEpisodeRest <= 0:
 					mode = MODE_INIT
 				else:
-					#init_board()
+					init_board()
 					next = TILE_RED		# 常に赤が先手
-				break
 			else:
 				next = (TILE_BLUE + TILE_RED) - next
+		else:		# 1局/毎フレーム
+			init_board()
+			check_pieces_count()
+			while true:
+				var go = moveRandom(next)
+				check_pieces_count()
+				if go:
+					nEpisodeRest -= 1
+					if nEpisodeRest <= 0:
+						mode = MODE_INIT
+					else:
+						#init_board()
+						next = TILE_RED		# 常に赤が先手
+					break
+				else:
+					next = (TILE_BLUE + TILE_RED) - next
 
 func _on_RxHUM_Button_pressed():
 	if mode == MODE_RAND_HUMAN: return
