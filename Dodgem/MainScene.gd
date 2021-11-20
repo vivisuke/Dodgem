@@ -165,13 +165,17 @@ func _input(event):
 			init_cursor()
 func can_move(nx):
 	if nx == TILE_RED:
-		if( nRed == 2 ||
-			$Board/TileMap.get_cell(0, 0) == TILE_RED ||
-			$Board/TileMap.get_cell(1, 0) == TILE_RED ||
-			$Board/TileMap.get_cell(2, 0) == TILE_RED ):
-				return true
+		if nRed == 2: return true
+		if lastRedPos.y == 0: return true
+		if $Board/TileMap.get_cell(lastRedPos.x, lastRedPos.y - 1) == TILE_NONE: return true
+		if lastRedPos.x != 0 && $Board/TileMap.get_cell(lastRedPos.x - 1, lastRedPos.y) == TILE_NONE: return true
+		if lastRedPos.x != N_HORZ - 1 && $Board/TileMap.get_cell(lastRedPos.x + 1, lastRedPos.y) == TILE_NONE: return true
 	else:
-		pass
+		if nBlue == 2: return true
+		if lastBluePos.x == N_HORZ - 1: return true
+		if $Board/TileMap.get_cell(lastBluePos.x + 1, lastBluePos.y) == TILE_NONE: return true
+		if lastBluePos.y != 0 && $Board/TileMap.get_cell(lastBluePos.x, lastBluePos.y - 1) == TILE_NONE: return true
+		if lastBluePos.y != N_VERT - 1 && $Board/TileMap.get_cell(lastBluePos.x, lastBluePos.y + 1) == TILE_NONE: return true
 	return false
 func get_blue_moves() -> Array:
 	var lst = []		# 着手（Vector2(移動元, 移動先)）配列
