@@ -4,6 +4,7 @@ enum {
 	MODE_INIT = 0,
 	MODE_RAND_HUMAN,
 	MODE_RAND_RAND,
+	MODE_RAND_QAI,		# 赤：QAI、青：RANDOM、先手後手交互
 }
 const N_HORZ = 3
 const N_VERT = 3
@@ -19,11 +20,13 @@ var nEpisode = 0
 var nEpisodeRest = 0
 var cantMoveWon = false		# 着手不可での勝利
 var red_first = true		# 赤が先手
-var dstcur_showed = false		# 移動先カーソル表示状態
+var dstcur_showed = false	# 移動先カーソル表示状態
 var nMoved = 0				# 何手着手したか
 var next = TILE_RED			# TILE_RED | TILE_BLUE
-var nRed = 2				# 下側ピース個数
-var nBlue = 2				# 左側ピース個数
+var nRed = N_HORZ - 1		# 下側ピース個数
+var nBlue = N_VERT - 1		# 左側ピース個数
+var lastRedPos
+var lastBluePos
 var nRedWon = 0		# 赤勝利数
 var nBlueWon = 0	# 青勝利数
 
@@ -64,7 +67,7 @@ func init_cursor():
 		for x in range(N_HORZ):
 			$Board/CursorTileMap.set_cell(x, y-1, TILE_NONE)
 # 必ず左下原点から、赤番なら右・上の順、青番なら上・右の順にスキャン
-func get_key(nx):
+func get_key(nx) -> Array:		# [手番ビットボード, 非手番ビットボード]
 	var mask = 1<<8
 	var bitsR = 0
 	var bitsB = 0
@@ -82,6 +85,17 @@ func get_key(nx):
 				elif $Board/TileMap.get_cell(x, y) == TILE_BLUE: bitsB |= mask
 				mask >>= 1
 		return [bitsB, bitsR]
+func print_key(key):
+	var bd = []
+	#for i in range(N_HORZ * N_VERT): a.push_back(0)
+	var mask = 1<<8
+	for y in range(2, -1, -1):
+		for x in range(N_HORZ):
+			if (key[0] & mask) != 0: bd.push_back(1)
+			elif (key[1] & mask) != 0: bd.push_back(2)
+			else: bd.push_back(0)
+			mask >>= 1
+	print(bd)
 func check_pieces_count():
 	var nr = 0
 	var nb = 0
@@ -91,8 +105,25 @@ func check_pieces_count():
 			elif $Board/TileMap.get_cell(x, y) == TILE_BLUE: nb += 1
 	#return [nr, nb]
 	if nr != nRed || nb != nBlue:
+		print(nr, ", ", nb)
 		print(get_key(next))
 		assert( nr == nRed && nb == nBlue )
+func do_move(src, dst, col):
+	$Board/TileMap.set_cellv(src, TILE_NONE)		# 移動元
+	if dst.x < N_HORZ && dst.y >= 0:		# 盤面内の場合
+		$Board/TileMap.set_cellv(dst, col)
+		if col == TILE_RED:
+			lastRedPos = dst
+		else:
+			lastBluePos = dst
+	else:		# 盤面外へ移動の場合
+		if col == TILE_RED:
+			nRed -= 1
+		else:
+			nBlue -= 1
+	#print("#blue = %d, #red = %d" % [nBlue, nRed])
+	nMoved += 1
+	
 func _input(event):
 	if event is InputEventMouseButton && event.is_pressed():
 		#if next == TILE_BLUE: return
@@ -121,13 +152,7 @@ func _input(event):
 		else:
 			if $Board/CursorTileMap.get_cellv(mp) == TILE_DST:		# 移動先がクリックされた場合
 				print("src = ", cursor, ", dst = ", mp)
-				$Board/TileMap.set_cellv(cursor, TILE_NONE)		# 移動元
-				if mp.y >= 0:		# 盤面内の場合
-					$Board/TileMap.set_cellv(mp, TILE_RED)
-				else:
-					nRed -= 1
-				#print("#blue = %d, #red = %d" % [nBlue, nRed])
-				nMoved += 1
+				do_move(cursor, mp, TILE_RED)
 				if nRed == 0:
 					$MessLabel.text = "赤の勝ちです。"
 					nEpisode += 1
@@ -138,6 +163,16 @@ func _input(event):
 				else:
 					next = TILE_BLUE
 			init_cursor()
+func can_move(nx):
+	if nx == TILE_RED:
+		if( nRed == 2 ||
+			$Board/TileMap.get_cell(0, 0) == TILE_RED ||
+			$Board/TileMap.get_cell(1, 0) == TILE_RED ||
+			$Board/TileMap.get_cell(2, 0) == TILE_RED ):
+				return true
+	else:
+		pass
+	return false
 func get_blue_moves() -> Array:
 	var lst = []		# 着手（Vector2(移動元, 移動先)）配列
 	for y in range(N_VERT):
@@ -175,7 +210,7 @@ func gameOver(won):
 func moveRandom(nx) -> bool:		# nx: TILE_BLUE or TILE_RED, return: ゲーム終了？
 	var mvs = get_blue_moves() if nx == TILE_BLUE else get_red_moves()
 	if mvs.empty():
-		check_pieces_count()
+		#check_pieces_count()
 		print("nRed = ", nRed, ", nBlue = ", nBlue)
 		print(("red" if nx == TILE_RED else "blue"), " can't move")
 		#print(get_key(nx))
@@ -189,22 +224,25 @@ func moveRandom(nx) -> bool:		# nx: TILE_BLUE or TILE_RED, return: ゲーム終�
 	if mvs.size() == 1: mv = mvs[0]
 	else:
 		mv = mvs[rng.randi_range(0, mvs.size() - 1)]
-	$Board/TileMap.set_cellv(mv[0], TILE_NONE)		# 移動元消去
-	if mv[1].x < N_HORZ && mv[1].y >= 0:		# 盤面内の場合
-		$Board/TileMap.set_cellv(mv[1], nx)			# 移動先にピース設置
-	else:		# 盤面外に移動した場合
-		if nx == TILE_BLUE:
-			nBlue -= 1
-		else:
-			nRed -= 1
-	#print("#blue = %d, #red = %d" % [nBlue, nRed])
-	nMoved += 1
+	do_move(mv[0], mv[1], nx)
 	if nBlue == 0 || nRed == 0:
 		gameOver(TILE_BLUE if nBlue == 0 else TILE_RED)
 		return true;		# 終局
 	else:
 		return false;
+func get_maxQ_move(qix):
+	pass
+func process_rand_qai():
+	var qix0 = get_key(next)
+	var mvs = get_blue_moves() if next == TILE_BLUE else get_red_moves()
+	var ix
+	if next == TILE_RED:
+		ix = get_maxQ_move(qix0)
+	else:
+		ix = rng.randi_range(0, mvs.size() - 1)
+	pass
 func _process(delta):
+	check_pieces_count()
 	if mode == MODE_RAND_HUMAN:
 		if next == TILE_BLUE:
 			$MessLabel.text = ""
@@ -218,10 +256,12 @@ func _process(delta):
 				$MessLabel.text = "移動元をクリックしてください。"
 			else:
 				$MessLabel.text = "移動先をクリックしてください。"
+	elif mode == MODE_RAND_QAI:		# 赤：QAI、青：RANDOM
+		process_rand_qai()
 	elif mode == MODE_RAND_RAND:
 		if false:	# 1手/毎フレーム
 			var go = moveRandom(next)
-			check_pieces_count()
+			#check_pieces_count()
 			if go:
 				nEpisodeRest -= 1
 				if nEpisodeRest <= 0:
@@ -233,12 +273,14 @@ func _process(delta):
 				next = (TILE_BLUE + TILE_RED) - next
 		else:		# 1局/毎フレーム
 			if cantMoveWon:
+				var k = get_key(next)
+				print_key(k)
 				print("cantMoveWon == true")
 			init_board()
-			check_pieces_count()
+			#check_pieces_count()
 			while true:
 				var go = moveRandom(next)
-				check_pieces_count()
+				#check_pieces_count()
 				if go:
 					nEpisodeRest -= 1
 					if nEpisodeRest <= 0:
@@ -277,6 +319,17 @@ func _on_RxRx1000_Button_pressed():
 	clear_stats()
 	mode = MODE_RAND_RAND
 	last_mode = MODE_RAND_RAND
+	init_board()
+	next = TILE_RED		# 常に赤先手
+	pass
+
+
+func _on_RxAI_Button_pressed():
+	nEpisodeRest = 1
+	nEpisode = 0
+	clear_stats()
+	mode = MODE_RAND_QAI
+	last_mode = MODE_RAND_QAI
 	init_board()
 	next = TILE_RED		# 常に赤先手
 	pass
