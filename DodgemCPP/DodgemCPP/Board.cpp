@@ -38,3 +38,21 @@ void Board::print() const {
 	}
 	cout << "\n";
 }
+void Board::get_red_moves(Moves& lst) const {
+	//for(int ix = xyToIX(0, 0); ix <= xyToIX(N_HORZ-1, N_VERT-1); ++ix) {
+	//}
+	lst.clear();
+	for(int y = 0; y != N_VERT; ++y) {
+		for (int x = 0; x != N_HORZ; ++x) {
+			int ix = xyToIX(x, y);
+			if( m_ary[ix] == RED ) {
+				if( m_ary[ix+ARY_WIDTH] == EMPTY || y == N_VERT - 1 )
+					lst.push_back(Move(ix, ix+ARY_WIDTH));
+				if( m_ary[ix+1] == EMPTY )
+					lst.push_back(Move(ix, ix+1));
+				if( m_ary[ix-1] == EMPTY )
+					lst.push_back(Move(ix, ix-1));
+			}
+		}
+	}
+}
