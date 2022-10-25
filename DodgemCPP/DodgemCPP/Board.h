@@ -61,6 +61,8 @@ public:
 	void	get_blue_moves(Moves&) const;
 public:
 	void	init();
+	void	do_move_red(const Move& mv);
+	void	do_move_blue(const Move& mv);
 public:
 	uchar	m_ary[ARY_SIZE];
 };

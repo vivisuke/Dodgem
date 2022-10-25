@@ -13,8 +13,7 @@
 using namespace std;
 
 void Board::init() {
-	for(int i = 0; i != ARY_SIZE; ++i)
-		m_ary[i] = WALL;
+	for(int i = 0; i != ARY_SIZE; ++i) m_ary[i] = WALL;		//	周りは全部壁（含ゴール）
 	for(int y = 0; y != N_VERT; ++y) {
 		for (int x = 0; x != N_HORZ; ++x) {
 			m_ary[xyToIX(x, y)] = EMPTY;
@@ -69,4 +68,18 @@ void Board::get_blue_moves(Moves& lst) const {
 			}
 		}
 	}
+}
+void Board::do_move_red(const Move& mv) {
+	if( m_ary[mv.m_dst] != WALL )
+		m_ary[mv.m_dst] = RED;
+	else {
+	}
+	m_ary[mv.m_src] = EMPTY;
+}
+void Board::do_move_blue(const Move& mv) {
+	if( m_ary[mv.m_dst] != WALL )
+		m_ary[mv.m_dst] = BLUE;
+	else {
+	}
+	m_ary[mv.m_src] = EMPTY;
 }
