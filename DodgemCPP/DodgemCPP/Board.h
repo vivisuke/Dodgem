@@ -64,5 +64,7 @@ public:
 	void	do_move_red(const Move& mv);
 	void	do_move_blue(const Move& mv);
 public:
+	int		m_n_red;
+	int		m_n_blue;
 	uchar	m_ary[ARY_SIZE];
 };

@@ -23,6 +23,7 @@ void Board::init() {
 		m_ary[xyToIX(k, 0)] = RED;
 		m_ary[xyToIX(0, k)] = BLUE;
 	}
+	m_n_red = m_n_blue = N_HORZ - 1;
 }
 void Board::print() const {
 	for(int y = N_VERT; --y >= 0; ) {
@@ -73,6 +74,7 @@ void Board::do_move_red(const Move& mv) {
 	if( m_ary[mv.m_dst] != WALL )
 		m_ary[mv.m_dst] = RED;
 	else {
+		--m_n_red;
 	}
 	m_ary[mv.m_src] = EMPTY;
 }
@@ -80,6 +82,7 @@ void Board::do_move_blue(const Move& mv) {
 	if( m_ary[mv.m_dst] != WALL )
 		m_ary[mv.m_dst] = BLUE;
 	else {
+		--m_n_blue;
 	}
 	m_ary[mv.m_src] = EMPTY;
 }
