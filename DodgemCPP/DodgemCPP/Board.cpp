@@ -86,3 +86,19 @@ void Board::do_move_blue(const Move& mv) {
 	}
 	m_ary[mv.m_src] = EMPTY;
 }
+void Board::undo_move_red(const Move& mv) {
+	if( m_ary[mv.m_dst] != WALL )
+		m_ary[mv.m_dst] = EMPTY;
+	else {
+		++m_n_red;
+	}
+	m_ary[mv.m_src] = RED;
+}
+void Board::undo_move_blue(const Move& mv) {
+	if( m_ary[mv.m_dst] != WALL )
+		m_ary[mv.m_dst] = EMPTY;
+	else {
+		++m_n_blue;
+	}
+	m_ary[mv.m_src] = BLUE;
+}
