@@ -15,10 +15,11 @@ typedef unsigned char uchar;
 
 /*
 
-	３＞・・
-	２＞・・
-	１・▲▲
+	３＞・・			13 14 15
+	２＞・・			 9 10 11
+	１・▲▲			 5  6  7
 	　ａｂｃ
+
 
 */
 
@@ -57,6 +58,7 @@ public:
 public:
 	void	print() const;
 	void	get_red_moves(Moves&) const;
+	void	get_blue_moves(Moves&) const;
 public:
 	void	init();
 public:

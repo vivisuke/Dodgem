@@ -9,6 +9,7 @@ int main()
 	bd.print();
 	Moves lst;
 	bd.get_red_moves(lst);
+	bd.get_blue_moves(lst);
 
     std::cout << "OK.\n";
 }
