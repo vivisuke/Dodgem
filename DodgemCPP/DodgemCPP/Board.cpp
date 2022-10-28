@@ -102,3 +102,14 @@ void Board::undo_move_blue(const Move& mv) {
 	}
 	m_ary[mv.m_src] = BLUE;
 }
+string Board::hash() const {
+	string h;
+	for(int ix = xyToIX(0, 0); ix < xyToIX(N_HORZ-1, N_VERT-1); ++ix) {
+		switch( m_ary[ix] ) {
+		case EMPTY:	h += '.';	break;
+		case RED:	h += 'A';	break;
+		case BLUE:	h += '>';	break;
+		}
+	}
+	return h;
+}

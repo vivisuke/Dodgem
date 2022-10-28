@@ -10,6 +10,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 
 typedef unsigned char uchar;
 
@@ -59,6 +60,7 @@ public:
 	void	print() const;
 	void	get_red_moves(Moves&) const;
 	void	get_blue_moves(Moves&) const;
+	std::string	hash() const;
 public:
 	void	init();
 	void	do_move_red(const Move& mv);
