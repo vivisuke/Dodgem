@@ -90,6 +90,40 @@ void search_game_tree_uniq(Board& bd, bool red_turn, int depth) {
 		}
 	}
 }
+void count_nodes(Board& bd, bool red_turn) {
+	Moves lst;
+	if( red_turn ) {
+		bd.get_red_moves(lst);
+		//if( lst.empty() ) {
+		//	return;
+		//}
+		for(int i = 0; i != lst.size(); ++i) {
+			bd.do_move_red(lst[i]);
+			auto key = bd.hash();
+			if( g_set.find(key) == g_set.end() ) {		//	未探索の場合
+				g_set.insert(key);
+				++g_count;
+				count_nodes(bd, !red_turn);
+			}
+			bd.undo_move_red(lst[i]);
+		}
+	} else {
+		bd.get_blue_moves(lst);
+		//if( lst.empty() ) {
+		//	return;
+		//}
+		for(int i = 0; i != lst.size(); ++i) {
+			bd.do_move_blue(lst[i]);
+			auto key = bd.hash();
+			if( g_set.find(key) == g_set.end() ) {		//	未探索の場合
+				g_set.insert(key);
+				++g_count;
+				count_nodes(bd, !red_turn);
+			}
+			bd.undo_move_blue(lst[i]);
+		}
+	}
+}
 
 int main()
 {
@@ -98,6 +132,13 @@ int main()
 	Moves lst;
 	int ix;
 	if( true ) {
+		auto key = bd.hash();
+		g_set.insert(key);
+		g_count = 1;
+		count_nodes(bd, true);
+		cout << "g_count = " << g_count << "\n";
+	}
+	if( false ) {
 		const int DEPTH = 20;
 		cout << "depth = " << DEPTH << ":\n";
 		g_verbose = false;
